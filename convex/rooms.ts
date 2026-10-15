@@ -103,3 +103,28 @@ export const update = mutation({
     }
   },
 });
+
+export const deleteRoom = mutation({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .first();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+
+    const results = await ctx.db
+      .query("results")
+      .withIndex("by_room", (q) => q.eq("roomCode", args.code))
+      .collect();
+
+    for (const res of results) {
+      await ctx.db.delete(res._id);
+    }
+
+    return { success: true };
+  },
+});

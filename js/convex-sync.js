@@ -174,12 +174,23 @@
     }
   }
 
+  async function deleteRoom(roomCode) {
+    const c = initClient();
+    if (!c) return;
+    try {
+      await c.mutation("rooms:deleteRoom", { code: roomCode });
+    } catch (err) {
+      console.warn("Failed to delete room in Convex:", err.message);
+    }
+  }
+
   root.ConvexSync = {
     CONVEX_URL,
     syncRoom,
     submitResult,
     updateRoomSettings,
     resetRoom,
+    deleteRoom,
     updateBadge
   };
 
