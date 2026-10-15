@@ -49,7 +49,7 @@ Use the same browser/profile and keep this folder at the same path. Storage beha
 
 ```text
 offline/
-  index.html / admin.html
+  index.html / studio.html / admin.html
   css/styles.css
   js/data.js / core.js / app.js
   assets/rounds/round-1.svg ... round-5.svg

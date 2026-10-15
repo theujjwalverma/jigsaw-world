@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#e5dcfa">
-  <title>The Puzzle Challenge · Offline</title>
+  <title>Jigsaw Arena · A little focus. A lot of fun.</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e5dcfa'/%3E%3Cpath d='M6 7h8c-2-6 7-6 5 0h7v8c-6-2-6 7 0 5v6h-8c2-6-7-6-5 0H6v-8c6 2 6-7 0-5V7Z' fill='%23463765'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
   <script defer src="js/avatars.js"></script>
   <script defer src="js/data.js"></script>
@@ -15,13 +17,23 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="#join"><span class="brand-icon" aria-hidden="true">✚</span><span>The Puzzle Challenge<small>Little pieces. Big possibilities.</small></span></a>
-    <nav aria-label="Main navigation"><a href="#join">Play</a><a href="#leaderboard">Leaderboard</a><a href="#admin">Admin</a></nav>
+    <a class="brand" href="#join"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32" width="22" height="22" style="display:block"><path d="M6 7h8c-2-6 7-6 5 0h7v8c-6-2-6 7 0 5v6h-8c2-6-7-6-5 0H6v-8c6 2 6-7 0-5V7Z" fill="currentColor"/></svg></span><span>Jigsaw Arena<small>A little focus. A lot of fun.</small></span></a>
+    <nav aria-label="Main navigation"><a href="#join">Play</a><a href="#leaderboard">Leaderboard</a><a href="#studio">Studio</a><button id="sound-toggle" class="sound-toggle-btn" type="button" aria-label="Toggle sound" title="Sound On (Click to Mute)">🔊</button></nav>
   </header>
   <p id="storage-warning" class="notice error" role="alert" hidden></p>
   <main id="app"></main>
   <div id="announcement" class="toast" role="status" aria-live="polite" hidden></div>
-  <footer>No server. No sign-in. Your progress stays in this browser.<br><small>Keep this folder in the same location and use the same browser/profile to resume. Download a JSON backup for safekeeping.</small></footer>
+  <footer>
+    <p class="footer-title"><strong>Jigsaw Arena</strong> 🧩 <em>A little focus. A lot of fun.</em></p>
+    <p class="footer-copy">Every piece finds its place. Every second counts on the arena clock.<br>Can you claim <strong>#1</strong> on the World Leaderboard?</p>
+    <div class="footer-case-study">
+      <a href="case-study.html" class="case-study-badge">
+        <span class="cs-badge-icon">📖</span>
+        <span><strong>Engineering Case Study</strong>: From 40-player crash to zero-latency triumph →</span>
+      </a>
+    </div>
+    <small>Offline-ready · Real-time sync · Built for curious minds & puzzle speedrunners</small>
+  </footer>
   <noscript>This offline game needs JavaScript enabled.</noscript>
 </body>
 </html>

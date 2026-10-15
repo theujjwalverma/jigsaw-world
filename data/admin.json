@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "roomCode": "",
-  "title": "The Puzzle Challenge",
+  "title": "Jigsaw Arena",
   "leaderboardSeconds": 30,
   "rounds": [
     { "name": "A little sunshine", "grid": 2, "seconds": 180, "image": "assets/rounds/round-1.svg" },

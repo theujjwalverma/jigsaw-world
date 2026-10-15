@@ -81,7 +81,7 @@
     const index = room.rounds.findIndex((_, i) => !room.results[playerId]?.[i + 1]);
     return index < 0 ? null : index + 1;
   }
-  const api = { clone, validCode, createRoom, startSession, movePiece, correctCount, submit, roundLeaderboard, finalLeaderboard, nextRound };
+  const api = { clone, validCode, createRoom, startSession, movePiece, correctCount, submit, roundLeaderboard, finalLeaderboard, nextRound, shuffle };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.OfflineCore = api;
 })(typeof window !== "undefined" ? window : globalThis);

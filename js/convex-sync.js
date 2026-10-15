@@ -44,6 +44,17 @@
         } catch (err) {
           console.warn("Could not subscribe to rooms:list:", err.message);
         }
+        try {
+          client.onUpdate("results:listByRoom", { roomCode: "INSTANT" }, (results) => {
+            connected = true;
+            updateBadge("connected");
+            if (Array.isArray(results) && typeof root.onConvexInstantResultsUpdated === "function") {
+              root.onConvexInstantResultsUpdated(results);
+            }
+          });
+        } catch (err) {
+          console.warn("Could not subscribe to instant results:", err.message);
+        }
       }
       return client;
     } catch (e) {
@@ -192,11 +203,41 @@
     }
   }
 
+  async function submitInstantResult(data) {
+    const c = initClient();
+    if (!c) return;
+    try {
+      const playerId = JSON.stringify({
+        n: (data.name || "Player").slice(0, 30),
+        a: data.avatar || "",
+        t: Date.now(),
+        r: Math.random().toString(36).slice(2, 6)
+      });
+      await c.mutation("results:submit", {
+        roomCode: "INSTANT",
+        playerId,
+        round: 1,
+        moves: Number(data.moves) || 0,
+        timeMs: Number(data.timeMs) || 0,
+        completed: Boolean(data.completed),
+        correct: data.completed ? Number(data.pieces) || 16 : 0,
+        total: Number(data.pieces) || 16,
+        timedOut: Boolean(data.timedOut),
+        submittedAt: new Date().toISOString()
+      });
+      connected = true;
+      updateBadge("connected");
+    } catch (err) {
+      console.warn("Failed to submit instant result to Convex:", err.message);
+    }
+  }
+
   root.ConvexSync = {
     CONVEX_URL,
     initClient,
     syncRoom,
     submitResult,
+    submitInstantResult,
     updateRoomSettings,
     resetRoom,
     deleteRoom,

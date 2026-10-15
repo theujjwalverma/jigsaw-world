@@ -9,7 +9,7 @@ window.OFFLINE_GALLERY = [
 window.OFFLINE_DEFAULTS = {
   schemaVersion: 1,
   roomCode: "",
-  title: "The Puzzle Challenge",
+  title: "Jigsaw Arena",
   leaderboardSeconds: 30,
   players: window.OFFLINE_AVATARS,
   rounds: [

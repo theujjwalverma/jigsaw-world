@@ -57,3 +57,7 @@ window.offlineAvatarFor = function (name) {
   const normalize = value => value.toLowerCase().replace(/[^a-z0-9]/g, "");
   return window.OFFLINE_AVATARS.find(player => normalize(player.name) === normalize(name))?.avatar || "assets/avatars/mint.svg";
 };
+window.multiavatarUrl = function (name) {
+  if (!name || !String(name).trim()) return "assets/avatars/mint.svg";
+  return `https://api.multiavatar.com/${encodeURIComponent(String(name).trim())}.svg`;
+};
