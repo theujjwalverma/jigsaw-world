@@ -1,6 +1,9 @@
-# The Puzzle Challenge — offline edition
+# Jigsaw World
 
-Double-click **index.html** in this folder. No npm, backend, internet, build step, folder connection, JSON import, fonts or CDN is needed. Open **admin.html**, or use the Admin navigation, for settings.
+🎮 **Play Online**: [https://theujjwalverma.github.io/jigsaw-world/](https://theujjwalverma.github.io/jigsaw-world/)
+
+Now powered by **Convex DB** for real-time multiplayer leaderboard sync across any PC, phone, or tablet!
+You can also run it offline by opening **index.html** directly. No build step or local server required.
 
 ## Play
 
