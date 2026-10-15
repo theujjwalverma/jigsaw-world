@@ -1,0 +1,13 @@
+{
+  "name": "jigsaw-world",
+  "version": "1.0.0",
+  "description": "Jigsaw World with real-time Convex DB sync",
+  "scripts": {
+    "test": "node --test tests/core.test.cjs",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy"
+  },
+  "dependencies": {
+    "convex": "^1.46.0"
+  }
+}

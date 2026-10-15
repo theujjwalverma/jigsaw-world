@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e5dcfa">
+  <title>The Puzzle Challenge · Offline</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script defer src="js/avatars.js"></script>
+  <script defer src="js/data.js"></script>
+  <script defer src="js/core.js"></script>
+  <script defer src="js/convex.bundle.js"></script>
+  <script defer src="js/convex-sync.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#join"><span class="brand-icon" aria-hidden="true">✚</span><span>The Puzzle Challenge<small>Little pieces. Big possibilities.</small></span></a>
+    <nav aria-label="Main navigation"><a href="#join">Play</a><a href="#leaderboard">Leaderboard</a><a href="#admin">Admin</a><span class="badge badge-mint">● Offline edition</span></nav>
+  </header>
+  <p id="storage-warning" class="notice error" role="alert" hidden></p>
+  <main id="app"></main>
+  <div id="announcement" class="toast" role="status" aria-live="polite" hidden></div>
+  <footer>No server. No sign-in. Your progress stays in this browser.<br><small>Keep this folder in the same location and use the same browser/profile to resume. Download a JSON backup for safekeeping.</small></footer>
+  <noscript>This offline game needs JavaScript enabled.</noscript>
+</body>
+</html>

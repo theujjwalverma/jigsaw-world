@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "roomCode": "234234",
+  "title": "The Puzzle Challenge",
+  "leaderboardSeconds": 30,
+  "rounds": [
+    { "name": "A little sunshine", "grid": 2, "seconds": 180, "image": "assets/rounds/round-1.svg" },
+    { "name": "Mountain daydream", "grid": 3, "seconds": 240, "image": "assets/rounds/round-2.svg" },
+    { "name": "Coastal calm", "grid": 4, "seconds": 300, "image": "assets/rounds/round-3.svg" },
+    { "name": "Bloom & grow", "grid": 5, "seconds": 360, "image": "assets/rounds/round-4.svg" },
+    { "name": "Under the stars", "grid": 6, "seconds": 420, "image": "assets/rounds/round-5.svg" }
+  ]
+}

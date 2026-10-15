@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "description": "Reference schema only. Live results autosave as JSON in browser localStorage under jigsaw-offline-v1. This bundled file is not rewritten.",
+  "rooms": {
+    "234234": {
+      "results": {},
+      "sessions": {}
+    }
+  }
+}
