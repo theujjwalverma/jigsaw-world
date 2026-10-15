@@ -29,6 +29,26 @@
     u.searchParams.set("room", code);
     return u.toString();
   }
+  function getLeaderboardRoomCode() {
+    try {
+      const r = route();
+      if (r.startsWith("leaderboard/")) {
+        const part = r.slice("leaderboard/".length).split("?")[0].split("/")[0].trim();
+        if (part && C.validCode(part)) return part;
+      }
+      return getUrlRoomCode();
+    } catch (_) {}
+    return "";
+  }
+  function getLeaderboardShareUrl(code) {
+    if (location.protocol === "file:") {
+      return `https://theujjwalverma.github.io/jigsaw-world/?room=${code}#leaderboard`;
+    }
+    const u = new URL(location.href);
+    u.hash = `#leaderboard/${code}`;
+    u.searchParams.set("room", code);
+    return u.toString();
+  }
   const room = () => state.rooms?.[state.currentRoom] || null;
   const player = () => room()?.players?.find(p => p.id === state.playerId) || null;
   function warn(message) {
@@ -103,7 +123,7 @@
     });
     target.results = newResults;
     save();
-    if (route() === "leaderboard" || route() === "join") {
+    if (route().startsWith("leaderboard") || route() === "join") {
       render();
     }
   };
@@ -138,7 +158,7 @@
       });
     }
     save();
-    if (route() === "leaderboard" || route() === "join" || route() === "admin") {
+    if (route().startsWith("leaderboard") || route() === "join" || route() === "admin") {
       render();
     }
   };
@@ -201,10 +221,14 @@
     clearInterval(activeTimer); activeTimer = null; selected = null; playContext = null;
     document.querySelectorAll("nav a").forEach(a => {
       if (a.hash === "#admin") a.hidden = route() !== "admin";
-      if (a.hash === `#${route().split("/")[0]}`) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+      if (a.hash.startsWith("#leaderboard") && route().startsWith("leaderboard")) a.setAttribute("aria-current", "page");
+      else if (a.hash === `#${route().split("/")[0]}`) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
     });
+    const lbNav = document.querySelector('nav a[href*="leaderboard"]');
+    if (lbNav) lbNav.href = state.currentRoom ? `#leaderboard/${state.currentRoom}` : "#leaderboard";
     if (route() === "admin") renderAdmin();
-    else if (route() === "leaderboard") renderLeaderboard();
+    else if (route().startsWith("leaderboard")) renderLeaderboard();
     else if (route().startsWith("play/")) renderGame(Number(route().split("/")[1]));
     else renderJoin();
   }
@@ -258,7 +282,7 @@
       state.currentRoom = code; state.playerId = selectedPlayer; save();
       const next = C.nextRound(target, selectedPlayer);
       if (next) routeTo(`#play/${next}`);
-      else { viewingRound = "final"; routeTo("#leaderboard"); }
+      else { viewingRound = "final"; routeTo(state.currentRoom ? `#leaderboard/${state.currentRoom}` : "#leaderboard"); }
     });
     options();
   }
@@ -283,7 +307,7 @@
     const next = C.nextRound(r, p.id);
     if (!next || round !== next) {
       if (next) { routeTo(`#play/${next}`); return; }
-      viewingRound = "final"; routeTo("#leaderboard"); return;
+      viewingRound = "final"; routeTo(state.currentRoom ? `#leaderboard/${state.currentRoom}` : "#leaderboard"); return;
     }
     const config = r.rounds[round - 1], size = config.grid ** 2;
     imageReady = false;
@@ -297,7 +321,7 @@
       window.ConvexSync?.submitResult(r.code, p.id, round, result);
       boardWaitUntil = r.leaderboardSeconds > 0 ? Date.now() + r.leaderboardSeconds * 1000 : null;
       toast(timedOut ? "Time is up. Your round result has been saved." : "Round submitted. Nicely done!");
-      routeTo("#leaderboard");
+      routeTo(state.currentRoom ? `#leaderboard/${state.currentRoom}` : "#leaderboard");
     }
     function tick() {
       if (!valid() || !context.session) return;
@@ -384,10 +408,13 @@
     image.src = config.image;
   }
   function renderLeaderboard() {
+    const urlCode = getLeaderboardRoomCode();
+    if (urlCode && state.rooms[urlCode]) {
+      state.currentRoom = urlCode;
+    }
     const r = room(), p = player();
     if (!r) {
-      app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">A LITTLE FRIENDLY COMPETITION</p><h1>Leaderboard</h1><p class="subtitle">No room selected.</p></div></header>${roomStrip()}<div class="clay-panel" style="text-align:center;padding:48px 24px"><p class="hint">No room selected. Please join a tournament room or create one in Admin to view scores.</p><div class="actions" style="justify-content:center"><button id="switch-player">Join room</button></div></div></section>`;
-      bindRoomSwitch();
+      app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">A LITTLE FRIENDLY COMPETITION</p><h1>Leaderboard</h1><p class="subtitle">${urlCode ? `Room ${esc(urlCode)} not found.` : "No room selected."}</p></div></header><div class="clay-panel" style="text-align:center;padding:48px 24px"><p class="hint">${urlCode ? `Room ${esc(urlCode)} could not be found. Check the code or join a tournament room.` : "No room selected. Please join a tournament room or create one in Admin to view scores."}</p><div class="actions" style="justify-content:center"><button id="switch-player">Join room</button></div></div></section>`;
       document.getElementById("switch-player")?.addEventListener("click", () => routeTo("#join"));
       return;
     }
@@ -396,10 +423,22 @@
     const allRows = final ? C.finalLeaderboard(r) : C.roundLeaderboard(r, viewingRound);
     const rows = allRows.filter(row => row.rank !== null && row.rank !== undefined);
     const next = p ? C.nextRound(r, p.id) : null;
-    app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">A LITTLE FRIENDLY COMPETITION</p><h1>${final ? "Final leaderboard" : `Round ${viewingRound} leaderboard`}</h1><p class="subtitle">${esc(r.title)} · Room ${esc(r.code)} · Every little move counts.</p></div><span class="badge badge-peach">${rows.length} ${rows.length === 1 ? "player" : "players"} on leaderboard</span></header>${roomStrip()}<div class="actions" style="margin-top:16px;margin-bottom:8px">${p && next ? `<button id="next-round" class="mint">${r.sessions[p.id]?.[next] ? "Resume" : "Start"} round ${next} →</button>` : p && !next ? '<span class="badge badge-mint">All your rounds are complete ✓</span>' : ""}<button id="switch-player">Next player / Join game</button><button data-export class="quiet">Download results JSON</button></div><p id="next-countdown" class="hint" aria-live="polite"></p><div class="tabs" aria-label="Leaderboard round">${r.rounds.map((_, i) => `<button data-round="${i + 1}" class="${viewingRound === i + 1 ? "active" : ""}">Round ${i + 1}</button>`).join("")}<button data-round="final" class="${final ? "active" : ""}">Final standings</button></div><div class="table-wrap"><table><thead><tr><th>Rank</th><th>Player</th><th>${final ? "Rounds" : "Status"}</th><th>Moves</th><th>Time</th><th>Points</th></tr></thead><tbody>${rows.length ? rows.map(row => `<tr class="${row.id === state.playerId ? "me" : ""}"><td class="rank">${row.rank}</td><td><span class="table-player">${avatar(row)}<strong>${esc(row.name)}${row.id === state.playerId ? " (you)" : ""}</strong></span></td><td>${final ? `${row.submitted} / ${r.rounds.length}` : row.completed ? "Complete" : row.timedOut ? `Time up · ${row.correct}/${row.total} correct` : "Incomplete"}</td><td>${row.moves}</td><td>${time(row.timeMs)}</td><td><strong>${row.points}</strong></td></tr>`).join("") : `<tr><td colspan="6" style="text-align:center;padding:32px 16px;color:var(--muted)">No players have submitted results for this round yet.<br><small>Complete this round to be the first on the board!</small></td></tr>`}</tbody></table></div><p class="hint">Round ranking: completed first → fewer moves → faster time. Points start at 50 and decrease by rank (minimum 1). Final ranking uses total points, then total moves and time.</p></section>`;
-    bindRoomSwitch(); bindExport();
+    app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">A LITTLE FRIENDLY COMPETITION</p><h1>${final ? "Final leaderboard" : `Round ${viewingRound} leaderboard`}</h1><p class="subtitle">${esc(r.title)} · Room ${esc(r.code)} · Every little move counts.</p></div><span class="badge badge-peach">${rows.length} ${rows.length === 1 ? "player" : "players"} on leaderboard</span></header><div class="actions" style="margin-top:16px;margin-bottom:8px">${p && next ? `<button id="next-round" class="mint">${r.sessions[p.id]?.[next] ? "Resume" : "Start"} round ${next} →</button>` : p && !next ? '<span class="badge badge-mint">All your rounds are complete ✓</span>' : ""}<button id="copy-leaderboard-url" class="quiet" type="button">🔗 Copy Leaderboard URL</button><button id="download-pdf" class="quiet" type="button">Download PDF</button></div><p id="next-countdown" class="hint" aria-live="polite"></p><div class="tabs" aria-label="Leaderboard round">${r.rounds.map((_, i) => `<button data-round="${i + 1}" class="${viewingRound === i + 1 ? "active" : ""}">Round ${i + 1}</button>`).join("")}<button data-round="final" class="${final ? "active" : ""}">Final standings</button></div><div class="table-wrap"><table><thead><tr><th>Rank</th><th>Player</th><th>${final ? "Rounds" : "Status"}</th><th>Moves</th><th>Time</th><th>Points</th></tr></thead><tbody>${rows.length ? rows.map(row => `<tr class="${row.id === state.playerId ? "me" : ""}"><td class="rank">${row.rank}</td><td><span class="table-player">${avatar(row)}<strong>${esc(row.name)}${row.id === state.playerId ? " (you)" : ""}</strong></span></td><td>${final ? `${row.submitted} / ${r.rounds.length}` : row.completed ? "Complete" : row.timedOut ? `Time up · ${row.correct}/${row.total} correct` : "Incomplete"}</td><td>${row.moves}</td><td>${time(row.timeMs)}</td><td><strong>${row.points}</strong></td></tr>`).join("") : `<tr><td colspan="6" style="text-align:center;padding:32px 16px;color:var(--muted)">No players have submitted results for this round yet.<br><small>Complete this round to be the first on the board!</small></td></tr>`}</tbody></table></div><p class="hint">Round ranking: completed first → fewer moves → faster time. Points start at 50 and decrease by rank (minimum 1). Final ranking uses total points, then total moves and time.</p></section>`;
     app.querySelectorAll("[data-round]").forEach(button => button.addEventListener("click", () => { viewingRound = button.dataset.round === "final" ? "final" : Number(button.dataset.round); render(); }));
-    document.getElementById("switch-player")?.addEventListener("click", () => { state.playerId = null; selectedPlayer = null; boardWaitUntil = null; save(); routeTo("#join"); });
+    document.getElementById("copy-leaderboard-url")?.addEventListener("click", async event => {
+      const btn = event.currentTarget;
+      const shareUrl = getLeaderboardShareUrl(r.code);
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `<span>✓</span> Copied Leaderboard Link!`;
+        setTimeout(() => { btn.innerHTML = originalHTML; }, 2200);
+        toast(`Leaderboard link for room ${r.code} copied!`);
+      } catch (_) {
+        prompt("Copy this leaderboard URL:", shareUrl);
+      }
+    });
+    document.getElementById("download-pdf")?.addEventListener("click", () => window.print());
     document.getElementById("next-round")?.addEventListener("click", () => { boardWaitUntil = null; routeTo(`#play/${next}`); });
     if (p && next && boardWaitUntil && viewingRound !== "final") {
       const update = () => {
@@ -407,7 +446,7 @@
         if (remaining <= 0) { boardWaitUntil = null; routeTo(`#play/${next}`); return; }
         document.getElementById("next-countdown").textContent = `Next round starts in ${time(remaining)}. You can also start now.`;
       };
-      update(); if (route() === "leaderboard") activeTimer = setInterval(update, 500);
+      update(); if (route().startsWith("leaderboard")) activeTimer = setInterval(update, 500);
     }
   }
   function renderAdmin() {
@@ -425,7 +464,7 @@
       return;
     }
     const locked = Object.values(r.results).some(rounds => Object.keys(rounds).length) || Object.values(r.sessions).some(rounds => Object.keys(rounds).length);
-    app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">MAKE IT YOUR OWN</p><h1>Tournament studio</h1><p class="subtitle">Same little adventure. Your rules.</p></div></header><p class="notice">Settings and results autosave in this browser, not into the bundled JSON files. No folder connection or manual import is required. This admin screen is not a security boundary.</p>${roomStrip()}<div class="admin-layout"><section class="clay-panel"><h2>Your rooms</h2><p class="hint">Each six-digit code has its own players, settings and results.</p><form id="create-room"><label for="new-room">New room code</label><input id="new-room" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="e.g. 345345" required><button class="full">Create room</button></form><div class="actions" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"><button type="button" id="copy-room-url" class="full mint" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;padding:12px 16px">🔗 Copy Game URL for Room ${esc(r.code)}</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button data-export class="quiet" style="flex:1;min-width:120px">Download JSON</button><button id="reset-room" class="quiet" style="flex:1;min-width:120px">Reset results</button><button id="delete-room" class="danger" style="flex:1;min-width:120px">Delete room</button></div></div><p class="hint" style="word-break:break-all">Direct player link: <code id="share-link-display">${esc(getShareUrl(r.code))}</code></p><p id="admin-feedback" role="status" class="hint"></p></section><form id="admin-settings" class="clay-panel"><h2>Room ${esc(r.code)} settings</h2><label for="tournament-title">Tournament title</label><input id="tournament-title" name="title" maxlength="100" value="${esc(r.title)}" required><label for="leaderboard-seconds">Between-round leaderboard (seconds)</label><input id="leaderboard-seconds" type="number" name="leaderboardSeconds" min="0" max="600" value="${r.leaderboardSeconds}" required><p class="hint">0 = manual Next round. Otherwise, the next round starts automatically after this interval while the leaderboard is open.</p><label for="roster">Player names · one per line</label><textarea id="roster" name="roster" rows="7" maxlength="10000" ${locked ? "disabled" : ""}>${esc(r.players.map(p => p.name).join("\n"))}</textarea><label for="round-count">Number of rounds</label><input id="round-count" type="number" min="1" max="10" value="${r.rounds.length}" ${locked ? "disabled" : ""}><p class="hint">${locked ? "Players and puzzle settings are locked because play has started. Reset results to edit them." : "Up to 10 rounds. Choose a bundled picture or enter a local asset path (inside this folder). Non-square images are center-cropped to a square."}</p><div id="round-settings"></div><button class="full mint">Save settings</button><p id="settings-error" class="error" role="alert"></p></form></div></section>`;
+    app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">MAKE IT YOUR OWN</p><h1>Tournament studio</h1><p class="subtitle">Same little adventure. Your rules.</p></div></header><p class="notice">Settings and results autosave in this browser, not into the bundled JSON files. No folder connection or manual import is required. This admin screen is not a security boundary.</p>${roomStrip()}<div class="admin-layout"><section class="clay-panel"><h2>Your rooms</h2><p class="hint">Each six-digit code has its own players, settings and results.</p><form id="create-room"><label for="new-room">New room code</label><input id="new-room" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="e.g. 345345" required><button class="full">Create room</button></form><div class="actions" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"><button type="button" id="copy-room-url" class="full mint" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;padding:12px 16px">🔗 Copy Game URL for Room ${esc(r.code)}</button><button type="button" id="copy-leaderboard-url-admin" class="full quiet" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;padding:10px 16px;margin-top:0">📊 Copy Leaderboard URL for Room ${esc(r.code)}</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button data-export class="quiet" style="flex:1;min-width:120px">Download JSON</button><button id="reset-room" class="quiet" style="flex:1;min-width:120px">Reset results</button><button id="delete-room" class="danger" style="flex:1;min-width:120px">Delete room</button></div></div><p class="hint" style="word-break:break-all">Direct player link: <code id="share-link-display">${esc(getShareUrl(r.code))}</code><br>Direct leaderboard link: <code>${esc(getLeaderboardShareUrl(r.code))}</code></p><p id="admin-feedback" role="status" class="hint"></p></section><form id="admin-settings" class="clay-panel"><h2>Room ${esc(r.code)} settings</h2><label for="tournament-title">Tournament title</label><input id="tournament-title" name="title" maxlength="100" value="${esc(r.title)}" required><label for="leaderboard-seconds">Between-round leaderboard (seconds)</label><input id="leaderboard-seconds" type="number" name="leaderboardSeconds" min="0" max="600" value="${r.leaderboardSeconds}" required><p class="hint">0 = manual Next round. Otherwise, the next round starts automatically after this interval while the leaderboard is open.</p><label for="roster">Player names · one per line</label><textarea id="roster" name="roster" rows="7" maxlength="10000" ${locked ? "disabled" : ""}>${esc(r.players.map(p => p.name).join("\n"))}</textarea><label for="round-count">Number of rounds</label><input id="round-count" type="number" min="1" max="10" value="${r.rounds.length}" ${locked ? "disabled" : ""}><p class="hint">${locked ? "Players and puzzle settings are locked because play has started. Reset results to edit them." : "Up to 10 rounds. Choose a bundled picture or enter a local asset path (inside this folder). Non-square images are center-cropped to a square."}</p><div id="round-settings"></div><button class="full mint">Save settings</button><p id="settings-error" class="error" role="alert"></p></form></div></section>`;
     bindRoomSwitch(); bindExport();
     let draft = C.clone(r.rounds);
     const count = document.getElementById("round-count"), roundSettings = document.getElementById("round-settings");
@@ -539,6 +578,23 @@
         toast(`Game link for room ${r.code} copied! Share it with players.`);
       } catch (err) {
         prompt("Copy this game URL to share with players:", shareUrl);
+      }
+    });
+    document.getElementById("copy-leaderboard-url-admin")?.addEventListener("click", async event => {
+      const btn = event.currentTarget;
+      const shareUrl = getLeaderboardShareUrl(r.code);
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `<span>✓</span> Copied Room ${esc(r.code)} Leaderboard Link!`;
+        btn.style.opacity = "0.9";
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+          btn.style.opacity = "";
+        }, 2200);
+        toast(`Leaderboard link for room ${r.code} copied!`);
+      } catch (err) {
+        prompt("Copy this leaderboard URL:", shareUrl);
       }
     });
   }

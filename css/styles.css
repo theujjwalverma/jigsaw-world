@@ -13,3 +13,22 @@
 .gallery-card span{font-size:13px}.gallery-card small{color:var(--mint-dark)}
 .gallery-card.selected{border-color:#7754b8;background:#e9f5ed}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  @page{margin:1.2cm;size:auto}
+  body{background:#fff!important;color:#111!important}
+  .site-header,nav,.tabs,.actions,.room-strip,#next-countdown,footer,#storage-warning,#announcement,.toast,dialog{display:none!important}
+  .page{width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;box-shadow:none!important;border:none!important;background:transparent!important}
+  .page-heading{margin-bottom:20px!important;border-bottom:2px solid #333!important;padding-bottom:12px!important;display:flex!important;justify-content:space-between!important;align-items:flex-end!important}
+  .page-heading h1{font-size:24pt!important;color:#000!important;margin:0 0 4px 0!important}
+  .page-heading .subtitle{font-size:11pt!important;color:#444!important;margin:0!important}
+  .page-heading .badge{border:1px solid #777!important;background:#f0f0f0!important;color:#000!important;font-size:9pt!important;padding:4px 8px!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .table-wrap{overflow:visible!important;margin:16px 0!important}
+  table{width:100%!important;border-collapse:collapse!important;white-space:normal!important}
+  th,td{padding:8px 10px!important;border:1px solid #ccc!important;font-size:10pt!important;text-align:left!important}
+  th{background:#f0f0f0!important;color:#000!important;font-weight:bold!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  tr.me{background:#f8f8f8!important}
+  .table-player{display:inline-flex!important;align-items:center!important;gap:8px!important}
+  .table-player .avatar{width:24px!important;height:24px!important;border-radius:6px!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .rank{font-weight:bold!important;color:#000!important}
+  .hint{color:#666!important;font-size:9pt!important;margin-top:14px!important}
+}
