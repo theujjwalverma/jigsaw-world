@@ -74,12 +74,13 @@
   window.onConvexResultsUpdated = function (roomCode, results) {
     const target = state.rooms[roomCode];
     if (!target) return;
-    let changed = false;
+    const validPlayers = new Set(target.players.map(p => p.id));
+    const newResults = {};
     results.forEach(res => {
-      target.results[res.playerId] ||= {};
-      const existing = target.results[res.playerId][res.round];
-      if (!existing || existing.moves !== res.moves || existing.timeMs !== res.timeMs || existing.completed !== res.completed) {
-        target.results[res.playerId][res.round] = {
+      // ONLY include results for players who actually belong to this room's roster!
+      if (validPlayers.has(res.playerId)) {
+        newResults[res.playerId] ||= {};
+        newResults[res.playerId][res.round] = {
           moves: res.moves,
           timeMs: res.timeMs,
           completed: res.completed,
@@ -88,14 +89,47 @@
           timedOut: res.timedOut,
           submittedAt: res.submittedAt
         };
-        changed = true;
       }
     });
-    if (changed) {
-      save();
-      if (route() === "leaderboard" || route() === "join") {
-        render();
-      }
+    target.results = newResults;
+    save();
+    if (route() === "leaderboard" || route() === "join") {
+      render();
+    }
+  };
+
+  window.onConvexRoomSynced = function (remoteRoom) {
+    if (!remoteRoom?.code) return;
+    let target = state.rooms[remoteRoom.code];
+    if (!target) {
+      target = state.rooms[remoteRoom.code] = {
+        code: remoteRoom.code,
+        title: remoteRoom.title,
+        leaderboardSeconds: remoteRoom.leaderboardSeconds,
+        rounds: remoteRoom.rounds,
+        players: remoteRoom.players,
+        results: {},
+        sessions: {},
+        createdAt: remoteRoom.createdAt || new Date().toISOString()
+      };
+    } else {
+      target.title = remoteRoom.title;
+      target.leaderboardSeconds = remoteRoom.leaderboardSeconds;
+      target.rounds = remoteRoom.rounds;
+      target.players = remoteRoom.players;
+    }
+    // Prune results for players who are not in the room roster!
+    if (target.results) {
+      const validPlayers = new Set(target.players.map(p => p.id));
+      Object.keys(target.results).forEach(pid => {
+        if (!validPlayers.has(pid)) {
+          delete target.results[pid];
+        }
+      });
+    }
+    save();
+    if (route() === "leaderboard" || route() === "join" || route() === "admin") {
+      render();
     }
   };
   function toast(message) {

@@ -3,9 +3,16 @@
 
   const CONVEX_URL = "https://whimsical-stoat-412.eu-west-1.convex.cloud";
   let client = null;
-  let activeUnsubscribe = null;
+  let activeUnsubscribes = [];
   let activeRoomCode = null;
   let connected = false;
+
+  function clearSubscriptions() {
+    activeUnsubscribes.forEach(unsub => {
+      try { unsub(); } catch (_) {}
+    });
+    activeUnsubscribes = [];
+  }
 
   function updateBadge(status) {
     const badge = document.querySelector(".site-header .badge");
@@ -47,15 +54,11 @@
     const c = initClient();
     if (!c) return;
 
-    if (activeRoomCode === roomObj.code && activeUnsubscribe) {
+    if (activeRoomCode === roomObj.code && activeUnsubscribes.length > 0) {
       return;
     }
 
-    if (activeUnsubscribe) {
-      try { activeUnsubscribe(); } catch (_) {}
-      activeUnsubscribe = null;
-    }
-
+    clearSubscriptions();
     activeRoomCode = roomObj.code;
 
     // 1. Ensure room exists in Convex cloud
@@ -86,15 +89,28 @@
       updateBadge("offline");
     });
 
-    // 2. Subscribe to real-time results updates from all PCs
+    // 2. Subscribe to room config changes (players, rounds, title)
     try {
-      activeUnsubscribe = c.onUpdate("results:listByRoom", { roomCode: roomObj.code }, (results) => {
+      const roomUnsub = c.onUpdate("rooms:get", { code: roomObj.code }, (remoteRoom) => {
+        if (remoteRoom && typeof root.onConvexRoomSynced === "function") {
+          root.onConvexRoomSynced(remoteRoom);
+        }
+      });
+      activeUnsubscribes.push(roomUnsub);
+    } catch (err) {
+      console.warn("Failed to subscribe to Convex room:", err.message);
+    }
+
+    // 3. Subscribe to real-time results updates from all PCs
+    try {
+      const resultsUnsub = c.onUpdate("results:listByRoom", { roomCode: roomObj.code }, (results) => {
         connected = true;
         updateBadge("connected");
         if (Array.isArray(results) && typeof root.onConvexResultsUpdated === "function") {
           root.onConvexResultsUpdated(roomObj.code, results);
         }
       });
+      activeUnsubscribes.push(resultsUnsub);
     } catch (err) {
       console.warn("Failed to subscribe to Convex results:", err.message);
     }
