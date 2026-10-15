@@ -16,19 +16,7 @@
 
   function updateBadge(status) {
     const badge = document.querySelector(".site-header .badge");
-    if (!badge) return;
-    if (status === "connected") {
-      badge.className = "badge badge-mint";
-      badge.innerHTML = "● Live Sync: whimsical-stoat-412";
-      badge.title = "Connected to Convex DB. Leaderboard updates in real-time across devices.";
-    } else if (status === "syncing") {
-      badge.className = "badge badge-lavender";
-      badge.innerHTML = "◌ Syncing with Convex…";
-    } else {
-      badge.className = "badge badge-peach";
-      badge.innerHTML = "● Offline mode";
-      badge.title = "Using local browser storage. Changes stay on this device.";
-    }
+    if (badge) badge.hidden = true;
   }
 
   let roomsListSubscribed = false;
