@@ -31,6 +31,8 @@
     }
   }
 
+  let roomsListSubscribed = false;
+
   function initClient() {
     if (client) return client;
     if (typeof root.ConvexClient !== "function") {
@@ -41,6 +43,20 @@
     try {
       client = new root.ConvexClient(CONVEX_URL);
       updateBadge("syncing");
+      if (!roomsListSubscribed) {
+        roomsListSubscribed = true;
+        try {
+          client.onUpdate("rooms:list", {}, (rooms) => {
+            connected = true;
+            updateBadge("connected");
+            if (Array.isArray(rooms) && typeof root.onConvexRoomsListUpdated === "function") {
+              root.onConvexRoomsListUpdated(rooms);
+            }
+          });
+        } catch (err) {
+          console.warn("Could not subscribe to rooms:list:", err.message);
+        }
+      }
       return client;
     } catch (e) {
       console.warn("Could not initialize Convex client:", e);
@@ -175,6 +191,10 @@
   }
 
   async function deleteRoom(roomCode) {
+    if (activeRoomCode === roomCode) {
+      clearSubscriptions();
+      activeRoomCode = null;
+    }
     const c = initClient();
     if (!c) return;
     try {
@@ -186,6 +206,7 @@
 
   root.ConvexSync = {
     CONVEX_URL,
+    initClient,
     syncRoom,
     submitResult,
     updateRoomSettings,
@@ -193,5 +214,13 @@
     deleteRoom,
     updateBadge
   };
+
+  if (typeof document !== "undefined") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => initClient());
+    } else {
+      setTimeout(() => initClient(), 0);
+    }
+  }
 
 })(typeof window !== "undefined" ? window : globalThis);

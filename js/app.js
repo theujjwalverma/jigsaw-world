@@ -29,22 +29,32 @@
     u.searchParams.set("room", code);
     return u.toString();
   }
-  const room = () => state.rooms[state.currentRoom];
-  const player = () => room().players.find(p => p.id === state.playerId);
+  const room = () => state.rooms?.[state.currentRoom] || null;
+  const player = () => room()?.players?.find(p => p.id === state.playerId) || null;
   function warn(message) {
     const el = document.getElementById("storage-warning");
     el.textContent = message; el.hidden = false;
   }
   function initialState() {
-    return { schemaVersion: 1, currentRoom: defaults.roomCode, playerId: null, rooms: { [defaults.roomCode]: C.createRoom(defaults, defaults.roomCode) } };
+    return { schemaVersion: 1, currentRoom: null, playerId: null, rooms: {} };
   }
   try {
     const raw = localStorage.getItem(KEY);
     state = raw ? JSON.parse(raw) : initialState();
-    if (state.schemaVersion !== 1 || !state.rooms?.[state.currentRoom] || !Array.isArray(room().players) || !Array.isArray(room().rounds)) throw new Error("Invalid saved data");
+    if (state.schemaVersion !== 1 || typeof state.rooms !== "object" || state.rooms === null) throw new Error("Invalid saved data");
+    if (state.rooms["234234"]) {
+      delete state.rooms["234234"];
+      if (state.currentRoom === "234234") {
+        state.currentRoom = null;
+      }
+    }
+    const roomCodes = Object.keys(state.rooms);
+    if (!state.currentRoom || !state.rooms[state.currentRoom]) {
+      state.currentRoom = roomCodes[0] || null;
+    }
   } catch (error) {
     storageOK = false; state = initialState();
-    warn("Browser storage is unavailable or saved data is invalid. This session is temporary; existing saved data will not be overwritten. Download a JSON backup before closing.");
+    warn("Browser storage is unavailable or saved data is invalid. This session is temporary. Download a JSON backup before closing.");
   }
   function save() {
     if (!storageOK) return false;
@@ -132,6 +142,40 @@
       render();
     }
   };
+
+  window.onConvexRoomsListUpdated = function (remoteRooms) {
+    if (!Array.isArray(remoteRooms)) return;
+    const remoteCodes = new Set(remoteRooms.map(r => r.code));
+    remoteRooms.forEach(remoteRoom => {
+      if (!state.rooms[remoteRoom.code]) {
+        state.rooms[remoteRoom.code] = {
+          code: remoteRoom.code,
+          title: remoteRoom.title,
+          leaderboardSeconds: remoteRoom.leaderboardSeconds,
+          rounds: remoteRoom.rounds,
+          players: remoteRoom.players,
+          results: {},
+          sessions: {},
+          createdAt: remoteRoom.createdAt || new Date().toISOString()
+        };
+      }
+    });
+    // Remove locally cached rooms that were deleted on Convex
+    Object.keys(state.rooms).forEach(localCode => {
+      if (!remoteCodes.has(localCode)) {
+        delete state.rooms[localCode];
+        if (state.currentRoom === localCode) {
+          state.currentRoom = null;
+        }
+      }
+    });
+    if (!state.currentRoom) {
+      const remaining = Object.keys(state.rooms);
+      state.currentRoom = remaining.length > 0 ? remaining[0] : null;
+    }
+    save();
+    render();
+  };
   function toast(message) {
     const el = document.getElementById("announcement");
     el.textContent = message; el.hidden = false;
@@ -141,7 +185,10 @@
   function route() { return location.hash.slice(1) || "join"; }
   function avatar(p) { return `<img class="avatar" src="${esc(p.avatar)}" alt="">`; }
   function roomStrip() {
-    return `<form id="switch-room" class="room-strip"><label for="active-room">Room</label><select id="active-room" name="code">${Object.keys(state.rooms).map(code => `<option ${code === state.currentRoom ? "selected" : ""}>${esc(code)}</option>`).join("")}</select><button class="quiet">Open room</button><span class="badge badge-mint">${room().players.length} players</span></form>`;
+    const codes = Object.keys(state.rooms || {});
+    if (!codes.length) return `<div class="room-strip"><span class="badge badge-peach">No active rooms</span></div>`;
+    const r = room();
+    return `<form id="switch-room" class="room-strip"><label for="active-room">Room</label><select id="active-room" name="code">${codes.map(code => `<option ${code === state.currentRoom ? "selected" : ""}>${esc(code)}</option>`).join("")}</select><button class="quiet">Open room</button><span class="badge badge-mint">${r ? r.players.length : 0} players</span></form>`;
   }
   function bindRoomSwitch() {
     document.getElementById("switch-room")?.addEventListener("submit", event => {
@@ -163,12 +210,8 @@
   }
   function renderJoin() {
     const defaultCode = getUrlRoomCode();
-    if (defaultCode && !state.rooms[defaultCode] && defaultCode === defaults.roomCode) {
-      state.rooms[defaultCode] = C.createRoom(defaults, defaultCode);
-      save();
-    }
     const r = state.rooms[defaultCode] || room();
-    app.innerHTML = `<section class="page centered-card"><div class="illustration" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p class="eyebrow">YOUR NEXT LITTLE ADVENTURE</p><h1>Join Tournament</h1><p class="subtitle">Friendly competition.<br>A whole lot of satisfying little clicks.</p><div class="badges"><span class="badge badge-lavender">${r?.rounds?.length || 5} rounds</span><span class="badge badge-mint">Real-Time Sync</span><span class="badge badge-peach">Play Anywhere</span></div><form id="join-form" class="join-form"><label for="room-code">Room code</label><input id="room-code" class="code" name="code" value="${esc(defaultCode)}" placeholder="e.g. 234234" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" required><label for="player-search">Find your name</label><input id="player-search" type="search" placeholder="Search your name, e.g. Ujjwal" autocomplete="off"><div id="player-options" class="players-list" role="group" aria-label="Choose your player"></div><p id="selected-name" class="selection-note muted" aria-live="polite">Choose your name to continue.</p><button id="join-button" class="full mint" disabled>Join game →</button><p id="join-error" role="alert" class="error"></p></form><p class="hint">Demo room: <strong>234234</strong> · Add names and create rooms in Admin.<br>Syncs scores across devices in real time.</p></section>`;
+    app.innerHTML = `<section class="page centered-card"><div class="illustration" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p class="eyebrow">YOUR NEXT LITTLE ADVENTURE</p><h1>Join Tournament</h1><p class="subtitle">Friendly competition.<br>A whole lot of satisfying little clicks.</p><div class="badges"><span class="badge badge-lavender">${r?.rounds?.length || 5} rounds</span><span class="badge badge-mint">Real-Time Sync</span><span class="badge badge-peach">Play Anywhere</span></div><form id="join-form" class="join-form"><label for="room-code">Room code</label><input id="room-code" class="code" name="code" value="${esc(defaultCode)}" placeholder="e.g. 404500" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" required><label for="player-search">Find your name</label><input id="player-search" type="search" placeholder="Search your name, e.g. Ujjwal" autocomplete="off"><div id="player-options" class="players-list" role="group" aria-label="Choose your player"></div><p id="selected-name" class="selection-note muted" aria-live="polite">Choose your name to continue.</p><button id="join-button" class="full mint" disabled>Join game →</button><p id="join-error" role="alert" class="error"></p></form><p class="hint">Enter your 6-digit room code to join.<br>Syncs scores across devices in real time.</p></section>`;
     const codeInput = document.getElementById("room-code");
     const search = document.getElementById("player-search");
     selectedPlayer = null;
@@ -182,13 +225,9 @@
         return;
       }
       let target = state.rooms[code];
-      if (!target && code === defaults.roomCode) {
-        target = state.rooms[code] = C.createRoom(defaults, code);
-        save();
-      }
       const matches = (target?.players || []).filter(p => p.name.toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase()));
       if (!target?.players.some(p => p.id === selectedPlayer)) selectedPlayer = null;
-      document.getElementById("player-options").innerHTML = matches.length ? matches.map(p => `<button type="button" class="player-option ${p.id === selectedPlayer ? "selected" : ""}" data-player="${esc(p.id)}" aria-pressed="${p.id === selectedPlayer}">${avatar(p)}<span>${esc(p.name)}</span></button>`).join("") : `<p class="hint">${target ? "No matching names. Add players in Admin." : (code.length === 6 ? "Room not found. Create this room in Admin or check code." : "Enter 6 digits.")}</p>`;
+      document.getElementById("player-options").innerHTML = matches.length ? matches.map(p => `<button type="button" class="player-option ${p.id === selectedPlayer ? "selected" : ""}" data-player="${esc(p.id)}" aria-pressed="${p.id === selectedPlayer}">${avatar(p)}<span>${esc(p.name)}</span></button>`).join("") : `<p class="hint">${target ? "No matching names. Add players in Admin." : (code.length === 6 ? "Room not found. Check code or create it in Admin." : "Enter 6 digits.")}</p>`;
       const chosen = target?.players.find(p => p.id === selectedPlayer);
       const next = chosen ? C.nextRound(target, chosen.id) : null;
       document.getElementById("selected-name").textContent = chosen ? `${chosen.name} selected · ${next ? `Next: round ${next}` : "All rounds submitted"}` : "Choose your name to continue.";
@@ -203,10 +242,6 @@
       selectedPlayer = null;
       const val = codeInput.value.trim();
       if (val.length === 6 && C.validCode(val)) {
-        if (!state.rooms[val] && val === defaults.roomCode) {
-          state.rooms[val] = C.createRoom(defaults, val);
-          save();
-        }
         if (state.rooms[val]) {
           state.currentRoom = val;
           syncConvex();
@@ -350,6 +385,12 @@
   }
   function renderLeaderboard() {
     const r = room(), p = player();
+    if (!r) {
+      app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">A LITTLE FRIENDLY COMPETITION</p><h1>Leaderboard</h1><p class="subtitle">No room selected.</p></div></header>${roomStrip()}<div class="clay-panel" style="text-align:center;padding:48px 24px"><p class="hint">No room selected. Please join a tournament room or create one in Admin to view scores.</p><div class="actions" style="justify-content:center"><button id="switch-player">Join room</button></div></div></section>`;
+      bindRoomSwitch();
+      document.getElementById("switch-player")?.addEventListener("click", () => routeTo("#join"));
+      return;
+    }
     if (viewingRound !== "final" && (!Number.isInteger(viewingRound) || viewingRound < 1 || viewingRound > r.rounds.length)) viewingRound = 1;
     const final = viewingRound === "final";
     const allRows = final ? C.finalLeaderboard(r) : C.roundLeaderboard(r, viewingRound);
@@ -371,6 +412,18 @@
   }
   function renderAdmin() {
     const r = room();
+    if (!r) {
+      app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">MAKE IT YOUR OWN</p><h1>Tournament studio</h1><p class="subtitle">Same little adventure. Your rules.</p></div><span class="badge badge-lavender">Local admin · no password</span></header><p class="notice">Settings and results autosave in this browser. Create a new room below to get started.</p>${roomStrip()}<div class="admin-layout"><section class="clay-panel"><h2>Create a room</h2><p class="hint">No room is currently selected. Create a new six-digit room code to get started.</p><form id="create-room"><label for="new-room">New room code</label><input id="new-room" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="e.g. 404500" required><button class="full">Create room</button></form></section><div class="clay-panel"><h2>No room selected</h2><p class="hint">Select an existing room from the bar above or create a new room to manage tournament settings and players.</p></div></div></section>`;
+      bindRoomSwitch();
+      document.getElementById("create-room")?.addEventListener("submit", event => {
+        event.preventDefault(); const code = new FormData(event.currentTarget).get("code").trim();
+        if (!C.validCode(code)) { toast("Enter a six-digit code."); return; }
+        if (state.rooms[code]) { toast("This room already exists. Open it using the room selector."); return; }
+        state.rooms[code] = C.createRoom(defaults, code); state.currentRoom = code; state.playerId = null; viewingRound = 1; boardWaitUntil = null;
+        save(); syncConvex(); render(); toast(`Room ${code} created.`);
+      });
+      return;
+    }
     const locked = Object.values(r.results).some(rounds => Object.keys(rounds).length) || Object.values(r.sessions).some(rounds => Object.keys(rounds).length);
     app.innerHTML = `<section class="page"><header class="page-heading"><div><p class="eyebrow">MAKE IT YOUR OWN</p><h1>Tournament studio</h1><p class="subtitle">Same little adventure. Your rules.</p></div><span class="badge badge-lavender">Local admin · no password</span></header><p class="notice">Settings and results autosave in this browser, not into the bundled JSON files. No folder connection or manual import is required. This admin screen is not a security boundary.</p>${roomStrip()}<div class="admin-layout"><section class="clay-panel"><h2>Your rooms</h2><p class="hint">Each six-digit code has its own players, settings and results.</p><form id="create-room"><label for="new-room">New room code</label><input id="new-room" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="e.g. 345345" required><button class="full">Create room</button></form><div class="actions" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"><button type="button" id="copy-room-url" class="full mint" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;padding:12px 16px">🔗 Copy Game URL for Room ${esc(r.code)}</button><div style="display:flex;gap:8px;flex-wrap:wrap"><button data-export class="quiet" style="flex:1;min-width:120px">Download JSON</button><button id="reset-room" class="quiet" style="flex:1;min-width:120px">Reset results</button><button id="delete-room" class="danger" style="flex:1;min-width:120px">Delete room</button></div></div><p class="hint" style="word-break:break-all">Direct player link: <code id="share-link-display">${esc(getShareUrl(r.code))}</code></p><p id="admin-feedback" role="status" class="hint"></p></section><form id="admin-settings" class="clay-panel"><h2>Room ${esc(r.code)} settings</h2><label for="tournament-title">Tournament title</label><input id="tournament-title" name="title" maxlength="100" value="${esc(r.title)}" required><label for="leaderboard-seconds">Between-round leaderboard (seconds)</label><input id="leaderboard-seconds" type="number" name="leaderboardSeconds" min="0" max="600" value="${r.leaderboardSeconds}" required><p class="hint">0 = manual Next round. Otherwise, the next round starts automatically after this interval while the leaderboard is open.</p><label for="roster">Player names · one per line</label><textarea id="roster" name="roster" rows="7" maxlength="10000" ${locked ? "disabled" : ""}>${esc(r.players.map(p => p.name).join("\n"))}</textarea><label for="round-count">Number of rounds</label><input id="round-count" type="number" min="1" max="10" value="${r.rounds.length}" ${locked ? "disabled" : ""}><p class="hint">${locked ? "Players and puzzle settings are locked because play has started. Reset results to edit them." : "Up to 10 rounds. Choose a bundled picture or enter a local asset path (inside this folder). Non-square images are center-cropped to a square."}</p><div id="round-settings"></div><button class="full mint">Save settings</button><p id="settings-error" class="error" role="alert"></p></form></div></section>`;
     bindRoomSwitch(); bindExport();
@@ -460,19 +513,14 @@
 
       delete state.rooms[codeToDelete];
       const remainingCodes = Object.keys(state.rooms);
-      if (remainingCodes.length > 0) {
-        state.currentRoom = remainingCodes[0];
-      } else {
-        state.rooms[defaults.roomCode] = C.createRoom(defaults, defaults.roomCode);
-        state.currentRoom = defaults.roomCode;
-      }
+      state.currentRoom = remainingCodes.length > 0 ? remainingCodes[0] : null;
       state.playerId = null;
       selectedPlayer = null;
       boardWaitUntil = null;
       viewingRound = 1;
       save();
       window.ConvexSync?.deleteRoom(codeToDelete);
-      syncConvex();
+      if (state.currentRoom) syncConvex();
       render();
       toast(`Room ${codeToDelete} has been permanently deleted.`);
     });

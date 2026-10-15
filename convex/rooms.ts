@@ -11,6 +11,13 @@ export const get = query({
   },
 });
 
+export const list = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("rooms").collect();
+  },
+});
+
 export const ensureRoom = mutation({
   args: {
     code: v.string(),

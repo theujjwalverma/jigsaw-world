@@ -8,7 +8,7 @@ window.OFFLINE_GALLERY = [
 ];
 window.OFFLINE_DEFAULTS = {
   schemaVersion: 1,
-  roomCode: "234234",
+  roomCode: "",
   title: "The Puzzle Challenge",
   leaderboardSeconds: 30,
   players: window.OFFLINE_AVATARS,
