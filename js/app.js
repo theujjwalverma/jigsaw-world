@@ -22,7 +22,7 @@
   }
   function getShareUrl(code) {
     if (location.protocol === "file:") {
-      return `https://theujjwalverma.github.io/jigsaw-world/?room=${code}`;
+      return `https://jigsaw.donotquit.in/?room=${code}`;
     }
     const u = new URL(location.href);
     u.hash = "#join";
@@ -42,7 +42,7 @@
   }
   function getLeaderboardShareUrl(code) {
     if (location.protocol === "file:") {
-      return `https://theujjwalverma.github.io/jigsaw-world/?room=${code}#leaderboard`;
+      return `https://jigsaw.donotquit.in/?room=${code}#leaderboard`;
     }
     const u = new URL(location.href);
     u.hash = `#leaderboard/${code}`;
